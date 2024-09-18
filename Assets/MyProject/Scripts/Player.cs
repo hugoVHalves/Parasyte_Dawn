@@ -5,53 +5,48 @@ using UnityEngine;
 
 public class Player : MonoBehaviour
 {
-    private Vector3 entradasJogador;
     private CharacterController characterController;
-    [SerializeField] private float velocidadeJogador;
     private Transform myCamera;
 
-    //Movimentaçao pulo
-    private bool estaNoChao;
-    [SerializeField] private Transform verificadorChao;
-    [SerializeField] private LayerMask cenarioMask;
-    [SerializeField] private float alturaDoSalto = 1f;
-    private float gravidade = -9.81f;
-    private float velocidadeVertical;
+    [SerializeField] private float velocidadeJogador;
+    [SerializeField] private float alturaDoSalto;
+    [SerializeField] private float gravidade;
+    private Vector3 strafe;
+    private Vector3 forward;
+    private Vector3 vertical;
+
     private void Awake()
     {
         characterController = GetComponent<CharacterController>();
         myCamera = Camera.main.transform; //recupera a camera princiapal da cena
+
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+
+        /* ATIVA O CURSOR
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+        */
     }
 
-
-
-    // Update is called once per frame
     void Update()
     {
         //gira o personagem para a mesma direçao da camera
         transform.eulerAngles = new Vector3(transform.eulerAngles.x, myCamera.eulerAngles.y, transform.eulerAngles.z);
 
-        entradasJogador = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
-        entradasJogador = transform.TransformDirection(entradasJogador);// converte o vetor para trabalhar no mesmo eixo do transform
-        characterController.Move(entradasJogador * Time.deltaTime);
+        strafe = Input.GetAxisRaw("Horizontal") * velocidadeJogador * transform.right;
+        forward = Input.GetAxisRaw("Vertical") * velocidadeJogador * transform.forward;
+        vertical += gravidade * Time.deltaTime * Vector3.up;
 
-        estaNoChao = Physics.CheckSphere(verificadorChao.position, 0.3f, cenarioMask);
+        if (characterController.isGrounded)
+            vertical = Vector3.down;
 
-        if (Input.GetKeyDown(KeyCode.Space) && estaNoChao)
-        {
-            Debug.Log("pulando");
-            velocidadeVertical = Mathf.Sqrt(alturaDoSalto * -2f * gravidade);
-        }
+        if (Input.GetButtonDown("Jump") && characterController.isGrounded)
+            vertical += alturaDoSalto * Vector3.up;
 
-        if (estaNoChao && velocidadeVertical < 0)
-        {
-            velocidadeVertical = -1f;
-        }
-        velocidadeVertical += gravidade * Time.deltaTime;
+        if (vertical.y > 0 && (characterController.collisionFlags & CollisionFlags.CollidedAbove) != 0)
+            vertical = Vector3.zero;
 
-        characterController.Move(new Vector3(0, velocidadeVertical, 0) * Time.deltaTime);
+        characterController.Move((strafe + forward + vertical) * Time.deltaTime);
     }
 }
-
-
-
